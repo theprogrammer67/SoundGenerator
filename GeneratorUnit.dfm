@@ -113,7 +113,7 @@ object Form1: TForm1
     end
     object rgL: TRadioGroup
       Left = 16
-      Top = 16
+      Top = 20
       Width = 241
       Height = 94
       Caption = ' '#1058#1080#1087' '#1089#1080#1075#1085#1072#1083#1072' '
@@ -126,7 +126,8 @@ object Form1: TForm1
       Items.Strings = (
         #1090#1080#1096#1080#1085#1072
         #1089#1080#1085#1091#1089
-        #1084#1077#1072#1085#1076#1088)
+        #1084#1077#1072#1085#1076#1088
+        #1042#1086#1083#1085#1072)
       ParentFont = False
       TabOrder = 2
       OnClick = cbLtypChange
@@ -209,7 +210,7 @@ object Form1: TForm1
     end
     object rgR: TRadioGroup
       Left = 16
-      Top = 16
+      Top = 20
       Width = 241
       Height = 94
       Caption = ' '#1058#1080#1087' '#1089#1080#1075#1085#1072#1083#1072' '
@@ -222,7 +223,8 @@ object Form1: TForm1
       Items.Strings = (
         #1090#1080#1096#1080#1085#1072
         #1089#1080#1085#1091#1089
-        #1084#1077#1072#1085#1076#1088)
+        #1084#1077#1072#1085#1076#1088
+        #1042#1086#1083#1085#1072)
       ParentFont = False
       TabOrder = 2
       OnClick = cbRTypChange

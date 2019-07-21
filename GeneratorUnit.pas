@@ -79,7 +79,7 @@ implementation
 
 var
   Freq: array [0 .. 1] of LongInt;
-  Typ: array [0 .. 1] of LongInt;
+  Typ: array [0 .. 2] of LongInt;
   Lev: array [0 .. 1] of LongInt;
   tPred: array [0 .. 1] of Double;
   WaveForm: array [0 .. WaveFormLenght - 1] of SmallInt;
@@ -141,7 +141,7 @@ end;
 procedure Generator(buf: PAnsiChar; Typ, Freq, Lev, Size: LongInt;
   var tPred: Double);
 var
-  I: LongInt;
+  I, V: LongInt;
   OmegaC, t: Double;
 begin
   case Typ of
@@ -176,6 +176,18 @@ begin
           else
             PSmallInt(buf)^ := -Lev;
           Inc(PSmallInt(buf));
+        end;
+        tPred := t;
+      end;
+    3: // wave
+      begin
+        for I := 0 to Size div 2 do
+        begin
+          t := Frac(Freq / 44100 + tPred);
+          PSmallInt(buf)^ :=
+            Round((WaveForm[Trunc(t * WaveFormLenght)] / MAXSHORT) * Lev);
+          Inc(PSmallInt(buf));
+          tPred := t;
         end;
         tPred := t;
       end;
@@ -290,8 +302,8 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  rgL.ItemIndex := 1;
-  rgR.ItemIndex := 1;
+  rgL.ItemIndex := 3;
+  rgR.ItemIndex := 3;
 end;
 
 procedure TForm1.btnStopClick(Sender: TObject);
