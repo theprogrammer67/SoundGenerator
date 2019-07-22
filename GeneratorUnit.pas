@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Controls, Forms, Dialogs,
-  StdCtrls, mmsystem, ExtCtrls, Spin, Vcl.Graphics, Vcl.ComCtrls;
+  StdCtrls, mmsystem, ExtCtrls, Spin, Vcl.Graphics, Vcl.ComCtrls, uGenerator;
 
 type
   TServiceThread = class(TThread)
@@ -84,6 +84,7 @@ var
   tPred: array [0 .. 1] of Double;
   WaveForm: array [0 .. WaveFormLenght - 1] of SmallInt;
   WaveBmp: array [0 .. MAXWORD - 1, 0 .. WaveFormLenght - 1] of Byte;
+  Generators: array [0 .. 1] of TGenerator;
 
 procedure Mix(Buffer, First, Second: PAnsiChar; Count: LongInt); assembler;
 { процедура смешивает два массива данных First и Second и помещает }
@@ -134,14 +135,18 @@ begin
   Lev[1] := seRLev.Value;
   tPred[0] := 0;
   tPred[1] := 0;
+  Generators[0].Reset;
+  Generators[1].Reset;
+  Generators[0].Frequency := StrToInt(seLfreq.Text);
+  Generators[1].Frequency := StrToInt(seRfreq.Text);
   // запуск потока вывода на выполнение
   ServiceThread := TServiceThread.Create(False);
 end;
 
 procedure Generator(buf: PAnsiChar; Typ, Freq, Lev, Size: LongInt;
-  var tPred: Double);
+  var tPred: Double; Chnl: Integer);
 var
-  I, V: LongInt;
+  I: LongInt;
   OmegaC, t: Double;
 begin
   case Typ of
@@ -183,13 +188,9 @@ begin
       begin
         for I := 0 to Size div 2 do
         begin
-          t := Frac(Freq / 44100 + tPred);
-          PSmallInt(buf)^ :=
-            Round((WaveForm[Trunc(t * WaveFormLenght)] / MAXSHORT) * Lev);
+          PSmallInt(buf)^ := Round(Generators[Chnl].GetNextValue * Lev);
           Inc(PSmallInt(buf));
-          tPred := t;
         end;
-        tPred := t;
       end;
   end;
 end;
@@ -251,10 +252,11 @@ begin
   end;
 
   // генерация буферов каналов
-  Generator(CnlBuf[0], Typ[0], Freq[0], Lev[0], BlockSize div 2, tPred[0]);
-  Generator(CnlBuf[1], Typ[1], Freq[1], Lev[1], BlockSize div 2, tPred[1]);
+  Generator(CnlBuf[0], Typ[0], Freq[0], Lev[0], BlockSize div 2, tPred[0], 0);
+  Generator(CnlBuf[1], Typ[1], Freq[1], Lev[1], BlockSize div 2, tPred[1], 1);
   // смешивание буферов каналов в первый буфер вывода
   Mix(buf[0], CnlBuf[0], CnlBuf[1], BlockSize div 2);
+
   I := 0;
   while not Terminated do
   begin
@@ -263,8 +265,8 @@ begin
     WaitForSingleObject(hEvent, INFINITE);
     I := I xor 1;
     // генерация буферов каналов
-    Generator(CnlBuf[0], Typ[0], Freq[0], Lev[0], BlockSize div 2, tPred[0]);
-    Generator(CnlBuf[1], Typ[1], Freq[1], Lev[1], BlockSize div 2, tPred[1]);
+    Generator(CnlBuf[0], Typ[0], Freq[0], Lev[0], BlockSize div 2, tPred[0], I);
+    Generator(CnlBuf[1], Typ[1], Freq[1], Lev[1], BlockSize div 2, tPred[1], I);
     // смешивание буферов каналов в очередной буфер вывода
     Mix(buf[I], CnlBuf[0], CnlBuf[1], BlockSize div 2);
     // ожидание конца проигрывания и освобождения предыдущего буфера
@@ -285,12 +287,12 @@ procedure TForm1.btn1Click(Sender: TObject);
 var
   I: Integer;
 begin
-  for I := 0 to WaveFormLenght - 1 do
-    if I < WaveFormLenght div 2 then
-      WaveForm[I] := 16384
+  for I := 0 to WAVE_LENGHT - 1 do
+    if I < WAVE_LENGHT div 2 then
+      Generators[0].WaveBuf[I] := 0.9
     else
-      WaveForm[I] := -16384;
-
+      Generators[0].WaveBuf[I] := -0.9;
+  Generators[1].Assign(Generators[0]);
   WaveFormToLine;
 end;
 
@@ -304,6 +306,8 @@ procedure TForm1.FormCreate(Sender: TObject);
 begin
   rgL.ItemIndex := 3;
   rgR.ItemIndex := 3;
+  Generators[0] := TGenerator.Create;
+  Generators[1] := TGenerator.Create;
 end;
 
 procedure TForm1.btnStopClick(Sender: TObject);
@@ -359,8 +363,8 @@ begin
   pbWave.Canvas.MoveTo(0, pbWave.Height div 2); // Исходная точка
   for Xcanv := 0 to CanvasLength - 1 do
   begin
-    Xwave := Round((WaveFormLenght / CanvasLength) * Xcanv);
-    Ywave := WaveForm[Xwave];
+    Xwave := Round((WAVE_LENGHT / CanvasLength) * Xcanv);
+    Ywave := Round(Generators[0].WaveBuf[Xwave] * MAXSHORT);
     Ycanv := Ywave + MAXSHORT; // Сдвигаем вверх
     Ycanv := Round((CanvasHeight / MAXWORD) * Ycanv); // Пересчитываем
     Ycanv := CanvasHeight - Ycanv; // инвертируем
@@ -373,6 +377,8 @@ end;
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
   ServiceThread.Free;
+  FreeAndNil(Generators[0]);
+  FreeAndNil(Generators[1]);
 end;
 
 procedure TForm1.LineToWaveForm;
@@ -400,17 +406,20 @@ begin
     for Xwave := 0 to WaveFormLenght - 1 do
     begin
       WaveForm[Xwave] := Ywave;
+      Generators[0].WaveBuf[Xwave] := Ywave;
       for Ycanv := 0 to MAXWORD - 1 do
       begin
         if CheckPixel(Xwave, Ycanv, LBmpWave) then
         begin
           Ywave := MAXWORD - Ycanv; // инвертируем
           Ywave := Ywave - MAXSHORT; // сдвигаем вниз
-          WaveForm[Xwave] := Ywave;
+          Generators[0].WaveBuf[Xwave] := Ywave / MAXSHORT;
           Break;
         end;
       end;
     end;
+
+    Generators[1].Assign(Generators[0]);
   finally
     FreeAndNil(LBmpWave);
     FreeAndNil(LBmpOrigin);

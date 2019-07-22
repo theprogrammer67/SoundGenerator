@@ -2,7 +2,8 @@ program Generator;
 
 uses
   Forms,
-  GeneratorUnit in 'GeneratorUnit.pas' {Form1};
+  GeneratorUnit in 'GeneratorUnit.pas' {Form1},
+  uGenerator in 'uGenerator.pas';
 
 {$R *.RES}
 

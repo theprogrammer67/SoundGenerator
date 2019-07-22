@@ -5,7 +5,7 @@ object Form1: TForm1
   BorderStyle = bsSingle
   Caption = #1043#1077#1085#1077#1088#1072#1090#1086#1088' '#1089#1080#1075#1085#1072#1083#1072
   ClientHeight = 818
-  ClientWidth = 911
+  ClientWidth = 584
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -271,14 +271,12 @@ object Form1: TForm1
   object statStatus: TStatusBar
     Left = 0
     Top = 799
-    Width = 911
+    Width = 584
     Height = 19
     Panels = <
       item
         Width = 1024
       end>
-    ExplicitLeft = 288
-    ExplicitTop = 416
-    ExplicitWidth = 0
+    ExplicitWidth = 911
   end
 end
